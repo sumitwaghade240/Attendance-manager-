@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AttendEase - Cloud College Attendance Management System with Row Level Security & Multi-Role Portals.">
+    <title>AttendEase - College Attendance Management System</title>
+    <link rel="stylesheet" href="styles.css?v=2.0.0">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+
+    <!-- Notification Toast -->
+    <div id="notification-toast" class="notification" role="alert" aria-live="assertive">
+        <span id="notification-icon">🔔</span>
+        <span id="notification-message">Welcome to AttendEase Cloud</span>
+    </div>
+
+    <!-- Network Status Indicator -->
+    <div style="position: fixed; top: 16px; right: 16px; z-index: 1000;">
+        <span id="network-status-badge" class="network-status-badge not-configured" onclick="openCloudConfigModal()" title="Click to configure Supabase credentials">
+            <span class="status-dot">●</span> <span id="network-status-text">Cloud Not Configured</span> <span style="font-size: 0.8rem; margin-left: 2px;">⚙️</span>
+        </span>
+    </div>
+
+    <div id="app">
+
+        <!-- ================= AUTH & LOGIN VIEW ================= -->
+        <main id="login-view" class="login-container teacher-mode">
+            <div class="login-header">
+                <h1>AttendEase</h1>
+                <p id="portal-subtitle">College Attendance Management Cloud Portal</p>
+            </div>
+
+            <!-- Role Selector Slider -->
+            <div class="portal-toggle" role="tablist" id="auth-portal-tabs">
+                <button id="toggle-teacher" class="portal-btn active" role="tab" aria-selected="true" onclick="switchLoginPortal('teacher')">
+                    <span>🎓</span> Teacher
+                </button>
+                <button id="toggle-student" class="portal-btn" role="tab" aria-selected="false" onclick="switchLoginPortal('student')">
+                    <span>👨‍🎓</span> Student
+                </button>
+                <button id="toggle-monitor" class="portal-btn" role="tab" aria-selected="false" onclick="switchLoginPortal('monitor')">
+                    <span>👤</span> Monitor
+                </button>
+                <button id="toggle-admin" class="portal-btn" role="tab" aria-selected="false" onclick="switchLoginPortal('admin')">
+                    <span>🏛️</span> Admin
+                </button>
+                <div class="portal-slider" id="portal-slider-bar"></div>
+            </div>
+
+            <!-- 1. Login Form -->
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <input type="hidden" id="login-role" value="teacher">
+
+                <div class="form-group">
+                    <label for="username">Institutional Email / Username</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">✉️</span>
+                        <input type="text" id="username" class="input-field" placeholder="e.g. teacher.cse@demo.attendease.local" required autocomplete="username">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label for="password" style="margin-bottom: 0;">Password</label>
+                        <a href="#" onclick="showForgotPasswordForm(); return false;" style="font-size: 0.8rem; color: var(--text-secondary); text-decoration: none;">Forgot Password?</a>
+                    </div>
+                    <div class="input-wrapper">
+                        <span class="input-icon">🔒</span>
+                        <input type="password" id="password" class="input-field" placeholder="Enter password" required autocomplete="current-password">
+                        <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('password', this)" title="Toggle password visibility">👁️</button>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn" id="login-submit-btn">
+                    <span>Login Securely</span> →
+                </button>
+
+                <div class="demo-accounts-pill-container">
+                    <span style="font-size: 0.75rem; color: var(--text-muted); width: 100%; margin-bottom: 4px;">⚡ Quick Demo Accounts:</span>
+                    <button type="button" class="demo-pill" onclick="fillDemoCredentials('teacher.cse@demo.attendease.local', 'password', 'teacher')">🎓 CSE Teacher</button>
+                    <button type="button" class="demo-pill" onclick="fillDemoCredentials('teacher.bca@demo.attendease.local', 'password', 'teacher')">🎓 BCA Teacher</button>
+                    <button type="button" class="demo-pill" onclick="fillDemoCredentials('student.cse@demo.attendease.local', 'password', 'student')">👨‍🎓 CSE Student</button>
+                    <button type="button" class="demo-pill" onclick="fillDemoCredentials('student.bca@demo.attendease.local', 'password', 'student')">👨‍🎓 BCA Student</button>
+                    <button type="button" class="demo-pill" onclick="fillDemoCredentials('admin@demo.attendease.local', 'password', 'admin')">🏛️ Admin</button>
+                </div>
+
+                <p style="text-align: center; margin-top: 20px; font-size: 0.85rem; color: var(--text-secondary);">
+                    New student or teacher? <a href="#" onclick="toggleAuthMode('register'); return false;" style="color: var(--text-primary); font-weight: 600; text-decoration: none;">Register Account</a>
+                </p>
+            </form>
+
+            <!-- 2. Register Form -->
+            <form id="register-form" onsubmit="handleRegister(event)" style="display: none;">
+                <div class="form-group">
+                    <label for="reg-name">Full Name</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">📛</span>
+                        <input type="text" id="reg-name" class="input-field" placeholder="e.g. Alex Johnson" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="reg-email">Email Address</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">✉️</span>
+                        <input type="email" id="reg-email" class="input-field" placeholder="e.g. alex@college.edu" required>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="reg-role">Account Role</label>
+                        <select id="reg-role" class="select-field" onchange="handleRegistrationRoleChange()" required>
+                            <option value="student">Student</option>
+                            <option value="teacher">Teacher</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-dept">Department</label>
+                        <select id="reg-dept" class="select-field" onchange="handleRegistrationDeptChange()" required>
+                            <!-- Populated dynamically from departments -->
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" id="reg-class-group">
+                    <label for="reg-class">Academic Class</label>
+                    <select id="reg-class" class="select-field">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="reg-phone">Phone Number</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">📞</span>
+                        <input type="tel" id="reg-phone" class="input-field" placeholder="e.g. +919876543210" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="reg-password">Password</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">🔒</span>
+                        <input type="password" id="reg-password" class="input-field" placeholder="Min 6 characters" required oninput="checkPasswordStrength(this.value, 'reg-strength')">
+                        <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('reg-password', this)">👁️</button>
+                    </div>
+                    <div class="password-strength-container" id="reg-strength">
+                        <div class="strength-bars-wrap">
+                            <div class="strength-bar-seg" id="reg-seg-1"></div>
+                            <div class="strength-bar-seg" id="reg-seg-2"></div>
+                            <div class="strength-bar-seg" id="reg-seg-3"></div>
+                        </div>
+                        <span class="strength-label-txt" id="reg-strength-label">Password strength</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="reg-confirm-password">Confirm Password</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">🔒</span>
+                        <input type="password" id="reg-confirm-password" class="input-field" placeholder="Re-enter password" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn" id="reg-submit-btn">
+                    <span>Create Account</span> ✓
+                </button>
+
+                <p style="text-align: center; margin-top: 20px; font-size: 0.85rem; color: var(--text-secondary);">
+                    Already have an account? <a href="#" onclick="toggleAuthMode('login'); return false;" style="color: var(--text-primary); font-weight: 600; text-decoration: none;">Back to Login</a>
+                </p>
+            </form>
+
+            <!-- 3. Forgot Password Form -->
+            <form id="forgot-password-form" onsubmit="handleForgotPassword(event)" style="display: none;">
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px; line-height: 1.5;">
+                    Enter your registered institutional email. We will send a secure password recovery link to reset your account credentials.
+                </p>
+                <div class="form-group">
+                    <label for="forgot-email">Registered Email</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">✉️</span>
+                        <input type="email" id="forgot-email" class="input-field" placeholder="Enter your email" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn" id="forgot-submit-btn">
+                    <span>Send Recovery Link</span> 📩
+                </button>
+
+                <p style="text-align: center; margin-top: 20px; font-size: 0.85rem; color: var(--text-secondary);">
+                    Remembered password? <a href="#" onclick="toggleAuthMode('login'); return false;" style="color: var(--text-primary); font-weight: 600; text-decoration: none;">Back to Login</a>
+                </p>
+            </form>
+        </main>
+
+
+        <!-- ================= TEACHER DASHBOARD ================= -->
+        <div id="teacher-dashboard" class="dashboard-view teacher-mode">
+            <header class="dashboard-header">
+                <div class="brand-section">
+                    <span class="logo-icon">🎓</span>
+                    <div class="brand-title">
+                        <h2>AttendEase</h2>
+                        <p id="teacher-dept-subtitle">Teacher Console — Department Portal</p>
+                    </div>
+                </div>
+                <div class="user-profile">
+                    <div class="user-info">
+                        <p class="user-name" id="teacher-display-name">Dr. Sarah Jenkins</p>
+                        <span class="role-badge" id="teacher-role-badge">Teacher Account</span>
+                    </div>
+                    <button class="logout-btn" onclick="handleLogout()">
+                        <span>Log Out</span> 🚪
+                    </button>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- Sidebar Nav -->
+                <aside class="sidebar-panel" aria-label="Teacher navigation">
+                    <button class="nav-item active" onclick="switchTeacherTab('overview')">
+                        <span>📊</span> Overview & Analytics
+                    </button>
+                    <button class="nav-item" onclick="switchTeacherTab('take-attendance')">
+                        <span>📝</span> Take Attendance
+                    </button>
+                    <button class="nav-item" onclick="switchTeacherTab('alerts')">
+                        <span>⚠️</span> Absentee Alerts <span class="alert-badge" id="alert-pill-count" style="display: none;">0</span>
+                    </button>
+                    <button class="nav-item" onclick="switchTeacherTab('logs')">
+                        <span>📂</span> Attendance Database
+                    </button>
+                    <button class="nav-item" onclick="switchTeacherTab('roster')">
+                        <span>👥</span> Student Roster
+                    </button>
+                </aside>
+
+                <!-- Main content panel -->
+                <main class="main-panel">
+
+                    <!-- Tab: Overview -->
+                    <section id="tab-teacher-overview" class="tab-content active">
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <span class="metric-label">Assigned Classes</span>
+                                <span class="metric-value" id="metric-classes">0</span>
+                                <span class="metric-icon">🏫</span>
+                            </div>
+                            <div class="metric-card">
+                                <span class="metric-label">Assigned Students</span>
+                                <span class="metric-value" id="metric-students">0</span>
+                                <span class="metric-icon">👥</span>
+                            </div>
+                            <div class="metric-card">
+                                <span class="metric-label">Department Attendance Rate</span>
+                                <span class="metric-value" id="metric-rate">0%</span>
+                                <span class="metric-icon">📈</span>
+                            </div>
+                            <div class="metric-card alert-card" onclick="switchTeacherTab('alerts')" style="cursor: pointer;">
+                                <span class="metric-label">Flagged Absentees (2+ Days)</span>
+                                <span class="metric-value" id="metric-alerts">0</span>
+                                <span class="metric-icon">⚠️</span>
+                            </div>
+                        </div>
+
+                        <!-- Class Analytics -->
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>📊</span> Class Attendance Statistics</div>
+                            </div>
+                            <div class="analytics-chart-container" id="class-analytics-chart">
+                                <!-- Generated Dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Recent Submissions -->
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>🕒</span> Recent Lecture Log Submissions</div>
+                            </div>
+                            <div class="table-wrapper">
+                                <table class="classic-table" id="teacher-recent-logs-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Class</th>
+                                            <th>Subject & Topic Covered</th>
+                                            <th>Time</th>
+                                            <th>Attendance Rate</th>
+                                            <th>Submitted By</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="teacher-recent-logs-tbody">
+                                        <!-- JS filled -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab: Take Attendance -->
+                    <section id="tab-teacher-take-attendance" class="tab-content">
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>📝</span> Record Lecture Attendance</div>
+                            </div>
+                            
+                            <form id="teacher-attendance-form" onsubmit="handleTeacherAttendanceSubmit(event)">
+                                <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                                    <div class="form-group">
+                                        <label for="teach-att-class">Select Assigned Class</label>
+                                        <select id="teach-att-class" class="select-field" onchange="loadStudentsForTeacherAttendance()" required></select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="teach-att-date">Lecture Date</label>
+                                        <input type="date" id="teach-att-date" class="input-field" style="padding-left: 15px;" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="teach-att-start-time">Start Time</label>
+                                        <input type="time" id="teach-att-start-time" class="input-field" style="padding-left: 15px;" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="teach-att-end-time">End Time</label>
+                                        <input type="time" id="teach-att-end-time" class="input-field" style="padding-left: 15px;" required>
+                                    </div>
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="teach-att-subject">Subject</label>
+                                        <input type="text" id="teach-att-subject" list="subject-suggestions" class="input-field" style="padding-left: 15px;" placeholder="e.g. Database Systems (DBMS)" required>
+                                        <datalist id="subject-suggestions"></datalist>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="teach-att-topic">Topic Covered</label>
+                                        <input type="text" id="teach-att-topic" class="input-field" style="padding-left: 15px;" placeholder="e.g. 3NF Normalization & Indexing" required>
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
+                                    <div class="card-title-text" style="font-size: 1.05rem;">
+                                        <span>Students Roster</span>
+                                        <span id="teach-roster-count" class="text-secondary" style="font-size: 0.85rem; margin-left: 8px;">0 Students</span>
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button type="button" class="demo-pill" onclick="markAllAttendance('present')" style="background: var(--color-present-glow); color: var(--color-present);">✓ Mark All Present</button>
+                                        <button type="button" class="demo-pill" onclick="markAllAttendance('absent')" style="background: var(--color-absent-glow); color: var(--color-absent);">✗ Mark All Absent</button>
+                                    </div>
+                                </div>
+
+                                <!-- Attendance Checklist -->
+                                <div class="attendance-list-container" id="teach-attendance-checklist-container">
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">👥</div>
+                                        <p>Select a class to load student roster</p>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="submit-btn" style="background: linear-gradient(135deg, var(--color-teacher) 0%, #d97706 100%); margin-top: 24px;">
+                                    <span>Review & Submit Attendance</span> ✓
+                                </button>
+                            </form>
+                        </div>
+                    </section>
+
+                    <!-- Tab: Absentee Alerts -->
+                    <section id="tab-teacher-alerts" class="tab-content">
+                        <div class="card" style="border-color: rgba(244, 63, 94, 0.25);">
+                            <div class="card-title" style="color: #fb7185;">
+                                <div class="card-title-text"><span>⚠️</span> Critical Absentees (Absent $\ge$ 2 Consecutive Classes)</div>
+                            </div>
+                            <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">
+                                The following students have been absent for 2 or more consecutive lecture dates in your department's classes. You can call them directly or send a templated WhatsApp message.
+                            </p>
+                            
+                            <div class="table-wrapper">
+                                <table class="classic-table" id="absentee-alerts-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Student Name</th>
+                                            <th>Class</th>
+                                            <th>Consecutive Absences</th>
+                                            <th>Last Absent Lecture</th>
+                                            <th>Actions & Contacts</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="absentee-alerts-tbody">
+                                        <!-- JS dynamic filler -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab: Attendance Database -->
+                    <section id="tab-teacher-logs" class="tab-content">
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>📂</span> Department Attendance History Logs</div>
+                                <button class="action-icon-btn call-btn" style="background: rgba(245, 158, 11, 0.1); color: var(--color-teacher); border: 1px solid rgba(245, 158, 11, 0.3);" onclick="exportDatabaseToCSV()">
+                                    <span>Download CSV Database</span> 📥
+                                </button>
+                            </div>
+
+                            <div class="search-filter-bar">
+                                <select id="log-filter-class" class="select-field" style="width: auto;" onchange="filterAttendanceLogs()">
+                                    <option value="all">All Classes</option>
+                                </select>
+                                <input type="date" id="log-filter-date" class="search-input" style="max-width: 200px;" onchange="filterAttendanceLogs()">
+                                <button class="action-icon-btn share-btn-secondary" onclick="clearLogFilters()">Clear Filters</button>
+                            </div>
+
+                            <div class="table-wrapper">
+                                <table class="classic-table" id="all-logs-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Class</th>
+                                            <th>Lecture Time</th>
+                                            <th>Subject & Topic Covered</th>
+                                            <th>Present Rate</th>
+                                            <th>Submitted By</th>
+                                            <th>Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="all-logs-tbody">
+                                        <!-- JS filled -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab: Student Roster -->
+                    <section id="tab-teacher-roster" class="tab-content">
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>👥</span> Students Roster Directory</div>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="action-icon-btn call-btn" style="background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);" onclick="openAddStudentModal()">
+                                        <span>Add New Student</span> 👤
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="search-filter-bar">
+                                <input type="text" id="roster-search" class="search-input" placeholder="Search student by name or ID..." oninput="filterRosterTable()">
+                                <select id="roster-filter-class" class="select-field" style="width: auto;" onchange="filterRosterTable()">
+                                    <option value="all">All Classes</option>
+                                </select>
+                            </div>
+
+                            <div class="table-wrapper">
+                                <table class="classic-table" id="roster-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Student ID / Roll</th>
+                                            <th>Name</th>
+                                            <th>Class</th>
+                                            <th>Phone Number</th>
+                                            <th>Attendance Rate</th>
+                                            <th>Alerts</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="roster-tbody">
+                                        <!-- JS Filled -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                </main>
+            </div>
+        </div>
+
+
+        <!-- ================= STUDENT DASHBOARD ================= -->
+        <div id="student-dashboard" class="dashboard-view student-mode">
+            <header class="dashboard-header">
+                <div class="brand-section">
+                    <span class="logo-icon">👨‍🎓</span>
+                    <div class="brand-title">
+                        <h2>AttendEase</h2>
+                        <p id="student-header-subtitle">Student Portal — Academic Progress</p>
+                    </div>
+                </div>
+                <div class="user-profile">
+                    <div class="user-info">
+                        <p class="user-name" id="student-display-name">Student Account</p>
+                        <span class="role-badge" id="student-role-badge">Student Portal</span>
+                    </div>
+                    <button class="logout-btn" onclick="handleLogout()">
+                        <span>Log Out</span> 🚪
+                    </button>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- Sidebar Nav -->
+                <aside class="sidebar-panel" aria-label="Student navigation">
+                    <button class="nav-item active" onclick="switchStudentTab('overview')">
+                        <span>📈</span> My Attendance
+                    </button>
+                    <button class="nav-item" onclick="switchStudentTab('subjects')">
+                        <span>📚</span> Subject Breakdown
+                    </button>
+                    <button class="nav-item" onclick="switchStudentTab('history')">
+                        <span>📅</span> Lecture History
+                    </button>
+                    <button class="nav-item" onclick="switchStudentTab('profile')">
+                        <span>👤</span> My Profile
+                    </button>
+                </aside>
+
+                <!-- Main content panel -->
+                <main class="main-panel">
+
+                    <!-- Tab: Overview -->
+                    <section id="tab-student-overview" class="tab-content active">
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <span class="metric-label">Overall Attendance</span>
+                                <span class="metric-value" id="student-metric-rate">0%</span>
+                                <span class="metric-icon">📊</span>
+                            </div>
+                            <div class="metric-card">
+                                <span class="metric-label">Present Lectures</span>
+                                <span class="metric-value" id="student-metric-present" style="color: #34d399;">0</span>
+                                <span class="metric-icon">✅</span>
+                            </div>
+                            <div class="metric-card">
+                                <span class="metric-label">Absent Lectures</span>
+                                <span class="metric-value" id="student-metric-absent" style="color: #fb7185;">0</span>
+                                <span class="metric-icon">❌</span>
+                            </div>
+                            <div class="metric-card">
+                                <span class="metric-label">Total Conducted</span>
+                                <span class="metric-value" id="student-metric-total">0</span>
+                                <span class="metric-icon">🏫</span>
+                            </div>
+                        </div>
+
+                        <!-- Quick Summary Card -->
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>🎓</span> Academic Status & Eligibility</div>
+                            </div>
+                            <div id="student-status-banner" style="padding: 15px; border-radius: var(--border-radius-md); margin-top: 10px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2);">
+                                <h4 style="color: #34d399; margin-bottom: 4px;" id="student-status-heading">Attendance in Good Standing</h4>
+                                <p style="font-size: 0.9rem; color: var(--text-secondary);" id="student-status-desc">Your attendance rate exceeds the required 75% threshold for examination eligibility.</p>
+                            </div>
+                        </div>
+
+                        <!-- Recent Class Attendance -->
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>🕒</span> Recent Lectures Attended</div>
+                            </div>
+                            <div class="table-wrapper">
+                                <table class="classic-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Subject</th>
+                                            <th>Topic Covered</th>
+                                            <th>Time</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="student-recent-tbody">
+                                        <!-- Filled by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab: Subject Breakdown -->
+                    <section id="tab-student-subjects" class="tab-content">
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>📚</span> Subject-wise Attendance Metrics</div>
+                            </div>
+                            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 15px;">
+                                Individual lecture attendance tracking for each enrolled course subject.
+                            </p>
+                            <div class="subjects-grid" id="student-subjects-grid">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab: History -->
+                    <section id="tab-student-history" class="tab-content">
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>📅</span> Complete Attendance Log History</div>
+                            </div>
+                            <div class="table-wrapper">
+                                <table class="classic-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Subject</th>
+                                            <th>Topic Covered</th>
+                                            <th>Lecture Time</th>
+                                            <th>Teacher</th>
+                                            <th>My Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="student-all-history-tbody">
+                                        <!-- JS filled -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab: Profile & Settings -->
+                    <section id="tab-student-profile" class="tab-content">
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>👤</span> Student Profile & Security</div>
+                            </div>
+                            <div class="form-grid" style="margin-bottom: 25px;">
+                                <div>
+                                    <strong style="color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase;">Full Name</strong>
+                                    <p id="student-prof-name" style="font-size: 1.1rem; font-weight: 700;"></p>
+                                </div>
+                                <div>
+                                    <strong style="color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase;">Student ID / Roll</strong>
+                                    <p id="student-prof-id" style="font-size: 1.1rem; font-weight: 700;"></p>
+                                </div>
+                                <div>
+                                    <strong style="color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase;">Department</strong>
+                                    <p id="student-prof-dept" style="font-size: 1.1rem; font-weight: 700;"></p>
+                                </div>
+                                <div>
+                                    <strong style="color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase;">Enrolled Class</strong>
+                                    <p id="student-prof-class" style="font-size: 1.1rem; font-weight: 700;"></p>
+                                </div>
+                            </div>
+
+                            <h4 style="margin-bottom: 15px; font-weight: 700;">Change Account Password</h4>
+                            <form onsubmit="handlePasswordUpdate(event)">
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="new-student-password">New Password</label>
+                                        <input type="password" id="new-student-password" class="input-field" placeholder="Min 6 characters" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="confirm-student-password">Confirm New Password</label>
+                                        <input type="password" id="confirm-student-password" class="input-field" placeholder="Confirm password" required>
+                                    </div>
+                                </div>
+                                <button type="submit" class="submit-btn" style="width: auto; padding: 10px 24px;">Update Password</button>
+                            </form>
+                        </div>
+                    </section>
+
+                </main>
+            </div>
+        </div>
+
+
+        <!-- ================= CLASS MONITOR DASHBOARD ================= -->
+        <div id="monitor-dashboard" class="dashboard-view monitor-mode">
+            <header class="dashboard-header">
+                <div class="brand-section">
+                    <span class="logo-icon">📋</span>
+                    <div class="brand-title">
+                        <h2>AttendEase</h2>
+                        <p>Class Monitor Console</p>
+                    </div>
+                </div>
+                <div class="user-profile">
+                    <div class="user-info">
+                        <p class="user-name" id="monitor-display-name">Class Monitor</p>
+                        <span class="role-badge">Class Monitor</span>
+                    </div>
+                    <button class="logout-btn" onclick="handleLogout()">
+                        <span>Log Out</span> 🚪
+                    </button>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- Sidebar Nav -->
+                <aside class="sidebar-panel" aria-label="Monitor navigation">
+                    <button class="nav-item active" onclick="switchMonitorTab('take-attendance')">
+                        <span>📝</span> Take Attendance
+                    </button>
+                    <button class="nav-item" onclick="switchMonitorTab('add-student')">
+                        <span>➕</span> Add Student
+                    </button>
+                    <button class="nav-item" onclick="switchMonitorTab('share-records')">
+                        <span>📤</span> Share Records
+                    </button>
+                </aside>
+
+                <!-- Main content panel -->
+                <main class="main-panel">
+                    
+                    <!-- Tab: Take Attendance -->
+                    <section id="tab-take-attendance" class="tab-content active">
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>📝</span> Take Attendance (Assigned Class)</div>
+                            </div>
+                            
+                            <form id="attendance-form" onsubmit="handleMonitorAttendanceSubmit(event)">
+                                <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                                    <div class="form-group">
+                                        <label for="att-class">Assigned Class (Locked)</label>
+                                        <select id="att-class" class="select-field" disabled required></select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="att-date">Lecture Date</label>
+                                        <input type="date" id="att-date" class="input-field" style="padding-left: 15px;" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="att-start-time">Start Time</label>
+                                        <input type="time" id="att-start-time" class="input-field" style="padding-left: 15px;" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="att-end-time">End Time</label>
+                                        <input type="time" id="att-end-time" class="input-field" style="padding-left: 15px;" required>
+                                    </div>
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="att-subject">Subject</label>
+                                        <input type="text" id="att-subject" class="input-field" style="padding-left: 15px;" placeholder="e.g., Database Systems (DBMS)" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="att-topic">Topic Covered</label>
+                                        <input type="text" id="att-topic" class="input-field" style="padding-left: 15px;" placeholder="e.g., SQL Joins & Aggregate Functions" required>
+                                    </div>
+                                </div>
+
+                                <div class="card-title" style="margin-top: 20px; font-size: 1.05rem;">
+                                    <span>Class Roster</span>
+                                    <span id="roster-count" class="text-secondary" style="font-size: 0.85rem;">0 Students</span>
+                                </div>
+
+                                <!-- Attendance Checklist -->
+                                <div class="attendance-list-container" id="attendance-checklist-container">
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">👥</div>
+                                        <p>Loading assigned class student roster...</p>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="submit-btn" style="background: linear-gradient(135deg, var(--color-monitor) 0%, #0891b2 100%); margin-top: 24px;">
+                                    <span>Submit & Log Attendance</span> ✓
+                                </button>
+                            </form>
+                        </div>
+                    </section>
+
+                    <!-- Tab: Add Student -->
+                    <section id="tab-add-student" class="tab-content">
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>➕</span> Add Student Profile</div>
+                            </div>
+                            <form id="add-student-form" onsubmit="addStudent(event)">
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="stud-class">Assigned Class (Locked)</label>
+                                        <select id="stud-class" class="select-field" disabled required></select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="stud-name">Student Full Name</label>
+                                        <input type="text" id="stud-name" class="input-field" style="padding-left: 15px;" placeholder="e.g., Alex Johnson" required>
+                                    </div>
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="stud-phone">Calling Phone Number</label>
+                                        <input type="tel" id="stud-phone" class="input-field" style="padding-left: 15px;" placeholder="e.g., +919876543210" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="stud-whatsapp">WhatsApp Number</label>
+                                        <input type="tel" id="stud-whatsapp" class="input-field" style="padding-left: 15px;" placeholder="e.g., +919876543210" required>
+                                    </div>
+                                </div>
+                                <button type="submit" class="submit-btn" style="background: linear-gradient(135deg, var(--color-monitor) 0%, #0891b2 100%); width: auto; padding: 12px 30px;">
+                                    Add Student
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Class Student List -->
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>👥</span> Current Class Directory</div>
+                            </div>
+                            <div class="table-wrapper">
+                                <table class="classic-table" id="student-directory-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Student Name</th>
+                                            <th>Phone Number</th>
+                                            <th>WhatsApp Number</th>
+                                            <th>Alerts</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="student-directory-tbody">
+                                        <!-- JS filled -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab: Share Records -->
+                    <section id="tab-share-records" class="tab-content">
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>📤</span> Logged Lectures & Share Registry</div>
+                            </div>
+                            <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">
+                                Submitted class lecture records. Click "Copy Report" to copy formatted text to your clipboard.
+                            </p>
+                            <div class="table-wrapper">
+                                <table class="classic-table" id="monitor-logs-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Class</th>
+                                            <th>Subject & Topic Covered</th>
+                                            <th>Time</th>
+                                            <th>Present/Absent</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="monitor-logs-tbody">
+                                        <!-- JS filled -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+                </main>
+            </div>
+        </div>
+
+
+        <!-- ================= SUPER ADMIN DASHBOARD ================= -->
+        <div id="admin-dashboard" class="dashboard-view admin-mode">
+            <header class="dashboard-header">
+                <div class="brand-section">
+                    <span class="logo-icon">🏛️</span>
+                    <div class="brand-title">
+                        <h2>AttendEase</h2>
+                        <p>Institutional Super Administration</p>
+                    </div>
+                </div>
+                <div class="user-profile">
+                    <div class="user-info">
+                        <p class="user-name" id="admin-display-name">Super Administrator</p>
+                        <span class="role-badge">Super Admin</span>
+                    </div>
+                    <button class="logout-btn" onclick="handleLogout()">
+                        <span>Log Out</span> 🚪
+                    </button>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- Sidebar Nav -->
+                <aside class="sidebar-panel" aria-label="Admin navigation">
+                    <button class="nav-item active" onclick="switchAdminTab('overview')">
+                        <span>📊</span> College Overview
+                    </button>
+                    <button class="nav-item" onclick="switchAdminTab('departments')">
+                        <span>🏢</span> Departments
+                    </button>
+                    <button class="nav-item" onclick="switchAdminTab('classes')">
+                        <span>🎓</span> Academic Classes
+                    </button>
+                    <button class="nav-item" onclick="switchAdminTab('teachers')">
+                        <span>👨‍🏫</span> Teachers Directory
+                    </button>
+                    <button class="nav-item" onclick="switchAdminTab('audit')">
+                        <span>📜</span> Audit Trail Logs
+                    </button>
+                </aside>
+
+                <!-- Main content panel -->
+                <main class="main-panel">
+                    
+                    <!-- Tab: Overview -->
+                    <section id="tab-admin-overview" class="tab-content active">
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <span class="metric-label">Total Departments</span>
+                                <span class="metric-value" id="admin-metric-depts">0</span>
+                                <span class="metric-icon">🏢</span>
+                            </div>
+                            <div class="metric-card">
+                                <span class="metric-label">Active Classes</span>
+                                <span class="metric-value" id="admin-metric-classes">0</span>
+                                <span class="metric-icon">🎓</span>
+                            </div>
+                            <div class="metric-card">
+                                <span class="metric-label">Total Teachers</span>
+                                <span class="metric-value" id="admin-metric-teachers">0</span>
+                                <span class="metric-icon">👨‍🏫</span>
+                            </div>
+                            <div class="metric-card">
+                                <span class="metric-label">Total Students</span>
+                                <span class="metric-value" id="admin-metric-students">0</span>
+                                <span class="metric-icon">👥</span>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>🏛️</span> Institution Status Overview</div>
+                            </div>
+                            <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                                Global college attendance engine operating with PostgreSQL Row Level Security (RLS) and department isolation.
+                            </p>
+                        </div>
+                    </section>
+
+                    <!-- Tab: Departments -->
+                    <section id="tab-admin-departments" class="tab-content">
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>🏢</span> College Departments & Programs</div>
+                                <button class="action-icon-btn call-btn" style="background: var(--color-admin-glow); color: var(--color-admin); border: 1px solid rgba(168, 85, 247, 0.3);" onclick="openAddDepartmentModal()">
+                                    <span>Add Department</span> ➕
+                                </button>
+                            </div>
+                            <div class="table-wrapper">
+                                <table class="classic-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Code</th>
+                                            <th>Department / Program Name</th>
+                                            <th>Program Type</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-departments-tbody">
+                                        <!-- JS filled -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab: Classes -->
+                    <section id="tab-admin-classes" class="tab-content">
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>🎓</span> Academic Classes & Sections</div>
+                                <button class="action-icon-btn call-btn" style="background: var(--color-admin-glow); color: var(--color-admin); border: 1px solid rgba(168, 85, 247, 0.3);" onclick="openAddClassModal()">
+                                    <span>Add Class</span> ➕
+                                </button>
+                            </div>
+                            <div class="table-wrapper">
+                                <table class="classic-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Class Name</th>
+                                            <th>Department</th>
+                                            <th>Year / Semester</th>
+                                            <th>Academic Session</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-classes-tbody">
+                                        <!-- JS filled -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab: Teachers -->
+                    <section id="tab-admin-teachers" class="tab-content">
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>👨‍🏫</span> Faculty & Teacher Directory</div>
+                            </div>
+                            <div class="table-wrapper">
+                                <table class="classic-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Teacher Name</th>
+                                            <th>Email</th>
+                                            <th>Department</th>
+                                            <th>Role</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-teachers-tbody">
+                                        <!-- JS filled -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab: Audit Logs -->
+                    <section id="tab-admin-audit" class="tab-content">
+                        <div class="card">
+                            <div class="card-title">
+                                <div class="card-title-text"><span>📜</span> System Security Audit Logs</div>
+                            </div>
+                            <div class="table-wrapper">
+                                <table class="classic-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Timestamp</th>
+                                            <th>Action</th>
+                                            <th>Entity Type</th>
+                                            <th>Details / Metadata</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-audit-tbody">
+                                        <!-- JS filled -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                </main>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================= SUBMISSION CONFIRMATION / SAFETY MODAL ================= -->
+    <div id="attendance-confirm-modal" class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Confirm Attendance Submission</h3>
+                <button class="modal-close-btn" onclick="closeConfirmModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                    Please verify the session details before writing to the institutional database:
+                </p>
+                <div class="form-grid" style="margin-bottom: 20px;">
+                    <div>
+                        <strong style="color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase;">Class</strong>
+                        <p id="confirm-class-txt" style="font-weight: 700;"></p>
+                    </div>
+                    <div>
+                        <strong style="color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase;">Subject</strong>
+                        <p id="confirm-subject-txt" style="font-weight: 700;"></p>
+                    </div>
+                    <div>
+                        <strong style="color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase;">Date & Time</strong>
+                        <p id="confirm-datetime-txt" style="font-weight: 600;"></p>
+                    </div>
+                    <div>
+                        <strong style="color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase;">Topic</strong>
+                        <p id="confirm-topic-txt" style="font-weight: 600;"></p>
+                    </div>
+                </div>
+
+                <div class="metrics-grid" style="grid-template-columns: repeat(3, 1fr) !important; margin-bottom: 15px;">
+                    <div class="metric-card" style="padding: 12px;">
+                        <span class="metric-label">Total Roster</span>
+                        <span class="metric-value" id="confirm-total-count" style="font-size: 1.2rem;">0</span>
+                    </div>
+                    <div class="metric-card" style="padding: 12px; border-color: rgba(16,185,129,0.3);">
+                        <span class="metric-label" style="color: #34d399;">Present</span>
+                        <span class="metric-value" id="confirm-present-count" style="font-size: 1.2rem; color: #34d399;">0</span>
+                    </div>
+                    <div class="metric-card" style="padding: 12px; border-color: rgba(244,63,94,0.3);">
+                        <span class="metric-label" style="color: #fb7185;">Absent</span>
+                        <span class="metric-value" id="confirm-absent-count" style="font-size: 1.2rem; color: #fb7185;">0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="action-icon-btn share-btn-secondary" onclick="closeConfirmModal()">Back to Edit</button>
+                <button type="button" class="action-icon-btn call-btn" id="confirm-final-submit-btn" style="background: var(--color-present); color: white;" onclick="finalizeAttendanceSubmission()">Confirm & Submit ✓</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= DETAIL ATTENDANCE INSPECT MODAL ================= -->
+    <div id="attendance-details-modal" class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-lecture-title">Lecture Attendance Details</h3>
+                <button class="modal-close-btn" onclick="closeDetailsModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid" style="margin-bottom: 20px;">
+                    <div>
+                        <strong style="color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase;">Class</strong>
+                        <p id="modal-lecture-class" style="font-size: 1.1rem; font-weight: 700;"></p>
+                    </div>
+                    <div>
+                        <strong style="color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase;">Subject</strong>
+                        <p id="modal-lecture-subject" style="font-size: 1.1rem; font-weight: 700;"></p>
+                    </div>
+                    <div>
+                        <strong style="color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase;">Topic Covered</strong>
+                        <p id="modal-lecture-topic" style="font-size: 1.1rem; font-weight: 700;"></p>
+                    </div>
+                    <div>
+                        <strong style="color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase;">Date / Time</strong>
+                        <p id="modal-lecture-datetime" style="font-size: 1rem; font-weight: 600;"></p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 15px;">
+                    <h4 style="margin-bottom: 10px; font-weight: 700; font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">Roster Attendance Breakdown</h4>
+                    <div class="attendance-list-container" style="max-height: 300px;">
+                        <table class="classic-table">
+                            <thead>
+                                <tr>
+                                    <th>Student Name</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modal-roster-tbody">
+                                <!-- Dynamically populated list -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="action-icon-btn share-btn-secondary" style="padding: 10px 20px;" onclick="closeDetailsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= ADD STUDENT MODAL ================= -->
+    <div id="add-student-modal" class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Student Profile</h3>
+                <button class="modal-close-btn" onclick="closeAddStudentModal()">×</button>
+            </div>
+            <form id="modal-add-student-form" onsubmit="handleAddStudentModalSubmit(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="modal-stud-class">Assigned Class</label>
+                        <select id="modal-stud-class" class="select-field" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-stud-name">Student Full Name</label>
+                        <input type="text" id="modal-stud-name" class="input-field" style="padding-left: 15px;" placeholder="e.g., Alex Johnson" required>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="modal-stud-id">Roll Number / Student ID</label>
+                            <input type="text" id="modal-stud-id" class="input-field" style="padding-left: 15px;" placeholder="e.g., STU2026-001" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="modal-stud-email">Email (Optional)</label>
+                            <input type="email" id="modal-stud-email" class="input-field" style="padding-left: 15px;" placeholder="e.g., alex@student.edu">
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="modal-stud-phone">Calling Phone Number</label>
+                            <input type="tel" id="modal-stud-phone" class="input-field" style="padding-left: 15px;" placeholder="e.g., +919876543210" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="modal-stud-whatsapp">WhatsApp Number</label>
+                            <input type="tel" id="modal-stud-whatsapp" class="input-field" style="padding-left: 15px;" placeholder="e.g., +919876543210" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="action-icon-btn share-btn-secondary" style="padding: 10px 20px;" onclick="closeAddStudentModal()">Cancel</button>
+                    <button type="submit" class="action-icon-btn call-btn" style="background: var(--color-teacher); color: white; padding: 10px 20px;">Add Student</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= ADD DEPARTMENT MODAL (ADMIN) ================= -->
+    <div id="add-dept-modal" class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Department / Course</h3>
+                <button class="modal-close-btn" onclick="closeAddDeptModal()">×</button>
+            </div>
+            <form id="modal-add-dept-form" onsubmit="handleAddDeptModalSubmit(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="modal-dept-code">Department Code</label>
+                        <input type="text" id="modal-dept-code" class="input-field" style="padding-left: 15px;" placeholder="e.g., MCA, MBA, Fashion Design" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-dept-name">Full Department Name</label>
+                        <input type="text" id="modal-dept-name" class="input-field" style="padding-left: 15px;" placeholder="e.g., Master of Computer Applications" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-dept-type">Program Type</label>
+                        <select id="modal-dept-type" class="select-field">
+                            <option value="Undergraduate">Undergraduate (UG)</option>
+                            <option value="Postgraduate">Postgraduate (PG)</option>
+                            <option value="Diploma">Diploma / Professional</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="action-icon-btn share-btn-secondary" onclick="closeAddDeptModal()">Cancel</button>
+                    <button type="submit" class="action-icon-btn call-btn" style="background: var(--color-admin); color: white;">Save Department</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= ADD CLASS MODAL (ADMIN) ================= -->
+    <div id="add-class-modal" class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Academic Class</h3>
+                <button class="modal-close-btn" onclick="closeAddClassModal()">×</button>
+            </div>
+            <form id="modal-add-class-form" onsubmit="handleAddClassModalSubmit(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="modal-class-dept">Department</label>
+                        <select id="modal-class-dept" class="select-field" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-class-name">Class Name</label>
+                        <input type="text" id="modal-class-name" class="input-field" style="padding-left: 15px;" placeholder="e.g., BCA - 3rd Year (Sec A)" required>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="modal-class-year">Year</label>
+                            <select id="modal-class-year" class="select-field">
+                                <option value="1st Year">1st Year</option>
+                                <option value="2nd Year">2nd Year</option>
+                                <option value="3rd Year">3rd Year</option>
+                                <option value="4th Year">4th Year</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="modal-class-session">Academic Session</label>
+                            <input type="text" id="modal-class-session" class="input-field" style="padding-left: 15px;" value="2026-2027" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="action-icon-btn share-btn-secondary" onclick="closeAddClassModal()">Cancel</button>
+                    <button type="submit" class="action-icon-btn call-btn" style="background: var(--color-admin); color: white;">Save Class</button>
+                </div>
+            </form>
+        </div>
+    <!-- ================= CLOUD CONFIGURATION MODAL ================= -->
+    <div id="cloud-config-modal" class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal-content" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3>⚡ Supabase Cloud Settings</h3>
+                <button class="modal-close-btn" onclick="closeCloudConfigModal()">×</button>
+            </div>
+            <form id="modal-cloud-config-form" onsubmit="handleCloudConfigSubmit(event)">
+                <div class="modal-body">
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
+                        Connect AttendEase directly to your Supabase PostgreSQL project. Copy your credentials from <strong>Supabase Dashboard &rarr; Project Settings &rarr; API</strong>.
+                    </p>
+                    <div class="form-group">
+                        <label for="cfg-supabase-url">Supabase Project URL</label>
+                        <input type="url" id="cfg-supabase-url" class="input-field" style="padding-left: 15px;" placeholder="https://your-project-id.supabase.co" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cfg-supabase-anon-key">Supabase Anon Public API Key</label>
+                        <textarea id="cfg-supabase-anon-key" class="input-field" style="padding: 10px 15px; height: 90px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." required></textarea>
+                    </div>
+                    <div id="cfg-status-message" style="display: none; padding: 10px; border-radius: 6px; font-size: 0.85rem; margin-top: 10px;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="action-icon-btn share-btn-secondary" onclick="closeCloudConfigModal()">Cancel</button>
+                    <button type="submit" class="action-icon-btn call-btn" style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 10px 20px;">Save & Connect</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= EDIT DEPARTMENT MODAL (ADMIN) ================= -->
+    <div id="edit-dept-modal" class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Department</h3>
+                <button class="modal-close-btn" onclick="closeEditDeptModal()">×</button>
+            </div>
+            <form id="modal-edit-dept-form" onsubmit="handleEditDeptModalSubmit(event)">
+                <input type="hidden" id="edit-dept-id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="edit-dept-code">Department Code</label>
+                        <input type="text" id="edit-dept-code" class="input-field" style="padding-left: 15px;" required readonly style="opacity: 0.7;">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-dept-name">Full Department Name</label>
+                        <input type="text" id="edit-dept-name" class="input-field" style="padding-left: 15px;" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-dept-type">Program Type</label>
+                        <select id="edit-dept-type" class="select-field">
+                            <option value="Undergraduate">Undergraduate (UG)</option>
+                            <option value="Postgraduate">Postgraduate (PG)</option>
+                            <option value="Diploma">Diploma / Professional</option>
+                            <option value="Engineering">Engineering</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-dept-status">Status</label>
+                        <select id="edit-dept-status" class="select-field">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive (Deactivated)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="action-icon-btn share-btn-secondary" onclick="closeEditDeptModal()">Cancel</button>
+                    <button type="submit" class="action-icon-btn call-btn" style="background: var(--color-admin); color: white;">Update Department</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= SUPABASE PASSWORD RESET MODAL ================= -->
+    <div id="reset-password-modal" class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal-content" style="max-width: 440px;">
+            <div class="modal-header">
+                <h3>Set New Password</h3>
+                <button class="modal-close-btn" onclick="closePasswordResetModal()">×</button>
+            </div>
+            <form id="modal-reset-password-form" onsubmit="handlePasswordResetSubmit(event)">
+                <div class="modal-body">
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 14px;">
+                        Enter your new secure password below to complete password recovery.
+                    </p>
+                    <div class="form-group">
+                        <label for="modal-new-password">New Password</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">🔒</span>
+                            <input type="password" id="modal-new-password" class="input-field" placeholder="At least 6 characters" required oninput="evaluatePasswordStrength(this.value, 'modal-reset-strength-bar', 'modal-reset-strength-txt')">
+                            <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('modal-new-password', this)">👁️</button>
+                        </div>
+                        <div class="password-strength-container">
+                            <div class="password-strength-meter">
+                                <div id="modal-reset-strength-bar" class="strength-bar"></div>
+                            </div>
+                            <span id="modal-reset-strength-txt" class="strength-label">Password strength</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-confirm-new-password">Confirm New Password</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">🔒</span>
+                            <input type="password" id="modal-confirm-new-password" class="input-field" placeholder="Re-enter new password" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="action-icon-btn share-btn-secondary" onclick="closePasswordResetModal()">Cancel</button>
+                    <button type="submit" class="action-icon-btn call-btn" style="background: linear-gradient(135deg, #10b981, #059669); color: white;">Update Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Core Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="supabase-config.js?v=2.0.0"></script>
+    <script src="database.js?v=2.0.0"></script>
+    <script src="app.js?v=2.0.0"></script>
+</body>
+</html>
